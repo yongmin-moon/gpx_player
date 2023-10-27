@@ -1,5 +1,7 @@
 import gpxpy
 import os
+import datetime
+
 from flask import current_app
 
 # 추가적인 유틸리티 함수를 여기에 정의하세요.
@@ -33,4 +35,13 @@ def extract_time_from_gpx(file_path):
     with open(absolute_path, 'r') as gpx_file:
         gpx = gpxpy.parse(gpx_file)
         times = [point.time for track in gpx.tracks for segment in track.segments for point in segment.points]
+    return times
+
+
+def extract_time_from_gpx(file_path):
+    """GPX 파일에서 시간 데이터를 추출합니다."""
+    absolute_path = os.path.join(current_app.root_path, file_path)
+    with open(absolute_path, 'r') as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+        times = [point.time.astimezone(datetime.timezone.utc) for track in gpx.tracks for segment in track.segments for point in segment.points]
     return times

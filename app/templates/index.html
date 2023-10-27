@@ -6,6 +6,9 @@
     <title>GPX Player</title>
     <!-- 네이버 지도 API 스크립트 추가 -->
     <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=3lhrtcyfcx"></script>
+    <!--  A-Frame(360도 영상 view) 라이브러리 추가 -->
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+
     <style>
         /* 화면을 절반으로 나누는 스타일 */
         #video-viewer, #map-viewer {
@@ -18,10 +21,12 @@
 <body data-lat="{{ point[0] }}" data-lng="{{ point[1] }}">
     <!-- 영상 뷰어 -->
     <div id="video-viewer">
-        <video width="100%" controls>
-            <source src="{{ url_for('static', filename='videos/VID_20231024_171219_00_002.mp4') }}" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
+        <a-scene height: 70vh >
+            <a-assets>
+              <video id="myVideo" src="{{ url_for('static', filename='videos/VID_20231024_171219_00_002.mp4') }}" autoplay loop="true"></video>
+            </a-assets>
+            <a-videosphere src="#myVideo"></a-videosphere>
+          </a-scene>
     </div>
 
     <!-- 네이버 지도 뷰어 -->
@@ -53,6 +58,14 @@
                 strokeWeight: 2
             });
         });
+
+        // GPX 시간 데이터를 가져와서 영상과 동기화
+        fetch('/gpx-time-data')
+        .then(response => response.json())
+        .then(times => {
+            // 여기에서 영상의 재생 시간과 GPX 시간 데이터를 동기화하는 코드를 작성합니다.
+        });
+
     </script>
 </body>
 </html>
