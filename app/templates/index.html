@@ -34,7 +34,7 @@
     <div style="text-align: center; padding: 10px; position: relative; z-index: 10;">
         <button onclick="document.getElementById('myVideo').play()">재생</button>
         <button onclick="document.getElementById('myVideo').pause()">일시정지</button>
-        <button onclick="restartVideo()">재시작</button> <!-- 수정된 부분 -->
+        <button onclick="restartVideo()">재시작</button>
     </div>
 
 
@@ -96,30 +96,14 @@
 
             // 영상 위치에 따른 이동 경로 폴리라인에 새로운 위치 추가
             var path = videoPathPolyline.getPath();
-            path.push(new naver.maps.LatLng(lat, lng));
+            // path.push(new naver.maps.LatLng(lat, lng));
+            path.push(newPosition);
             videoPathPolyline.setPath(path);
 
-            // 지도 강제 렌더링
-            // naver.maps.Event.once(map, 'idle', function() {
-            //     map.refresh();
-            // });
         }
     
         // 비디오 요소 참조
         var videoElement = document.querySelector('#myVideo');
-
-
-        // 지도 로딩 완료 GPX 데이터를 가져와서 지도에 전체 경로 표시
-        // naver.maps.Event.once(map, 'idle', function() {
-        //     console.log("start poyline"); 
-        //     fetch('/gpx-data')
-        //     .then(response => response.json())
-        //     .then(data => {
-        //         console.log("GPX Data:", data); 
-        //         var path = data.map(coords => new naver.maps.LatLng(coords.lat, coords.lon)); // 수정된 부분
-        //         totalPathPolyline.setPath(path);
-        //     });
-        // });
     
         // GPX 데이터와 비디오 데이터 싱크맞춤
         fetch('/gpx-data')
@@ -144,8 +128,6 @@
 
                 var correspondingGPXDataIndex = gpxData.findIndex(d => new Date(d.time) > currentVideoTime);
 
-                
-
                 if (correspondingGPXDataIndex !== -1 && correspondingGPXDataIndex > 0) {
                     var correspondingGPXData = gpxData[correspondingGPXDataIndex - 1];
                     // console.log(correspondingGPXData);
@@ -155,9 +137,57 @@
                 }
             });
 
+            // 지도를 클릭했을 때의 이벤트 리스너
+            map.addListener('click', function(e) {
+                // 클릭한 지점의 위도와 경도를 가져온다.
+                var clickedPoint = e.coord;
+                
+                // 클릭한 지점의 위도와 경도를 픽셀 좌표로 변환한다.
+                var clickedPixel = map.getProjection().fromCoordToPoint(clickedPoint);
 
+                // 가장 가까운 GPX 데이터의 인덱스와 그 거리를 찾는다.
+                // reduce 함수를 사용하여 GPX 데이터 배열을 순회하며 가장 가까운 데이터를 찾는다.
+                var closestData = gpxData.reduce(function(acc, curr, index) {
+                    // 현재 GPX 데이터의 위도와 경도를 픽셀 좌표로 변환한다.
+                    var currPixel = map.getProjection().fromCoordToPoint(new naver.maps.LatLng(curr.lat, curr.lon));
+                    
+                    // 클릭한 지점과 현재 GPX 데이터 포인트 간의 픽셀 좌표 거리를 계산한다.
+                    var dx = clickedPixel.x - currPixel.x;
+                    var dy = clickedPixel.y - currPixel.y;
+                    var distance = Math.sqrt(dx * dx + dy * dy);
 
+                    // 만약 현재 거리가 이전에 찾은 거리보다 작으면 현재 데이터를 반환한다.
+                    if (distance < acc.distance) {
+                        return {
+                            index: index,
+                            distance: distance
+                        };
+                    } else {
+                        return acc;
+                    }
+                }, { index: -1, distance: Infinity });
+
+                // 만약 클릭한 지점과 가장 가까운 GPX 데이터 포인트 간의 거리가 0.0001보다 크면 함수를 종료한다.
+                // 이는 사용자가 GPX 경로에서 너무 멀리 클릭했을 경우를 처리하기 위함이다.
+                if (closestData.distance > 0.0001) {
+                    return;
+                }
+
+                // 클릭한 지점까지의 GPX 데이터를 가져온다.
+                var pathToClickedPoint = gpxData.slice(0, closestData.index + 1).map(data => new naver.maps.LatLng(data.lat, data.lon));
+
+                
+                // 영상 위치에 따른 이동 경로 폴리라인에 새로운 경로를 설정한다.
+                videoPathPolyline.setPath(pathToClickedPoint);
+
+                var correspondingGPXData = gpxData[closestData.index];
+                videoElement.currentTime = (new Date(correspondingGPXData.time) - videoStartTime) / 1000;
+            });
+            
         });
+
+        
+
     </script>
 
 </body>
