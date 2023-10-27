@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPX Player</title>
+    <!-- 네이버 지도 API 스크립트 추가 -->
+    <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=3lhrtcyfcx"></script>
+    <style>
+        /* 화면을 절반으로 나누는 스타일 */
+        #video-viewer, #map-viewer {
+            width: 100%;
+            height: 70vh; /* viewport height의 50% */
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body data-lat="{{ point[0] }}" data-lng="{{ point[1] }}">
+    <!-- 영상 뷰어 -->
+    <div id="video-viewer">
+        <video width="100%" controls>
+            <source src="{{ url_for('static', filename='videos/VID_20231024_171219_00_002.mp4') }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <!-- 네이버 지도 뷰어 -->
+    <div id="map-viewer"></div>
+
+    <script>
+        // 네이버 지도 초기화
+
+        var lat = parseFloat(document.body.getAttribute('data-lat'));
+        var lng = parseFloat(document.body.getAttribute('data-lng'));
+
+        var mapOptions = {
+            center: new naver.maps.LatLng(lat, lng),
+            zoom: 17
+        };
+        var map = new naver.maps.Map('map-viewer', mapOptions);
+
+
+        // GPX 데이터를 가져와서 지도에 경로 표시
+        fetch('/gpx-data')
+        .then(response => response.json())
+        .then(data => {
+            var path = data.map(coords => new naver.maps.LatLng(coords[0], coords[1]));
+            new naver.maps.Polyline({
+                map: map,
+                path: path,
+                strokeColor: '#FF0000',
+                strokeOpacity: 0.8,
+                strokeWeight: 2
+            });
+        });
+    </script>
+</body>
+</html>
