@@ -1,6 +1,7 @@
 import gpxpy
 import os
 import datetime
+from xml.etree import ElementTree
 
 from flask import current_app
 
@@ -45,3 +46,22 @@ def extract_time_from_gpx(file_path):
         gpx = gpxpy.parse(gpx_file)
         times = [point.time.astimezone(datetime.timezone.utc) for track in gpx.tracks for segment in track.segments for point in segment.points]
     return times
+
+
+def parse_gpx(file_path):
+    absolute_path = os.path.join(current_app.root_path, file_path)
+    tree = ElementTree.parse(absolute_path)
+    root = tree.getroot()
+
+    data = []
+    for trkpt in root.findall(".//{http://www.topografix.com/GPX/1/1}trkpt"):
+        lat = float(trkpt.attrib['lat'])
+        lon = float(trkpt.attrib['lon'])
+        time = trkpt.find("{http://www.topografix.com/GPX/1/1}time").text
+        data.append({
+            "lat": lat,
+            "lon": lon,
+            "time": time
+        })
+
+    return data
