@@ -21,6 +21,7 @@
 <body data-lat="{{ point[0] }}" data-lng="{{ point[1] }}">
     <!-- 영상 뷰어 -->
     <div id="video-viewer">
+
         <a-scene height: 70vh >
             <a-assets>
               <video id="myVideo" src="{{ url_for('static', filename='videos/VID_20231024_171219_00_002.mp4') }}" autoplay loop="true"></video>
@@ -28,6 +29,14 @@
             <a-videosphere src="#myVideo"></a-videosphere>
           </a-scene>
     </div>
+
+    <!-- 비디오 컨트롤 버튼 -->
+    <div style="text-align: center; padding: 10px; position: relative; z-index: 10;">
+        <button onclick="document.getElementById('myVideo').play()">재생</button>
+        <button onclick="document.getElementById('myVideo').pause()">일시정지</button>
+        <button onclick="document.getElementById('myVideo').currentTime = 0">재시작</button>
+    </div>
+
 
     <!-- 네이버 지도 뷰어 -->
     <div id="map-viewer"></div>
@@ -65,6 +74,74 @@
         .then(times => {
             // 여기에서 영상의 재생 시간과 GPX 시간 데이터를 동기화하는 코드를 작성합니다.
         });
+
+        // 비디오 요소 참조를 가정합니다.
+        var videoElement = document.querySelector('#myVideo');
+
+        // GPX 시간 데이터를 위한 플레이스홀더
+        var gpxTimes = [];
+
+        // 폴리라인 초기화
+        var polyline = new naver.maps.Polyline({
+            map: map,
+            path: [new naver.maps.LatLng(lat, lng)],
+            strokeColor: '#5347AA',
+            strokeWeight: 2
+        });
+
+        // 비디오 재생 위치에 따라 호출되는 함수
+        function updateMapPosition(lat, lng) {
+            // 새로운 위치로 마커 이동
+            var newPosition = new naver.maps.LatLng(lat, lng);
+            marker.setPosition(newPosition);
+
+            // 폴리라인에 새로운 위치 추가
+            var path = polyline.getPath();
+            path.push(new naver.maps.LatLng(lat, lng));
+            polyline.setPath(path);
+        }
+
+        // GPX 시간 데이터 가져오기
+        fetch('/gpx-time-data')
+        .then(response => response.json())
+        .then(times => {
+            gpxTimes = times;
+            gpxTimes.sort((a, b) => a - b);
+            // console.log(videoElement);  //확인
+            // console.log("gpxTimes : "+gpxTimes);  //확인
+
+            // 비디오 요소에 이벤트 리스너 추가
+            videoElement.addEventListener('timeupdate', function() {
+                // console.log("timeupdate event triggered"); //작동 확인
+                // 현재 비디오 재생 시간(초) 가져오기
+                var currentVideoTime = videoElement.currentTime;
+
+                // 해당하는 GPX 시간 찾기
+                // var correspondingGPXTimeIndex = gpxTimes.findIndex(time => time <= currentVideoTime);
+                // var correspondingGPXTimeIndex = gpxTimes.slice().reverse().findIndex(time => time <= currentVideoTime);
+
+                var currentVideoTime = videoElement.currentTime;
+                var correspondingGPXTimeIndex = times.findIndex(time => time <= currentVideoTime);
+                
+                console.log("correspondingGPXTimeIndex : "+correspondingGPXTimeIndex);
+                
+
+                if (correspondingGPXTimeIndex !== -1) {
+                    correspondingGPXTimeIndex = gpxTimes.length - 1 - correspondingGPXTimeIndex;
+                    // 해당하는 GPX 포인트 가져오기
+                    var correspondingGPXPoint = gpxTimes[correspondingGPXTimeIndex];
+
+                    // 지도상의 포인트 위치 업데이트
+                    // 이 부분에서는 GPX 포인트의 위도와 경도를 사용하여 지도상의 위치를 업데이트합니다.
+                    // 예를 들어, correspondingGPXPoint가 {lat: 37.123, lng: 127.123} 형태라면:
+                    console.log("lat : "+correspondingGPXPoint.lat+", lng : "+correspondingGPXPoint.lng)
+                    updateMapPosition(correspondingGPXPoint.lat, correspondingGPXPoint.lng);
+                }
+            });
+        });
+
+
+
 
     </script>
 </body>
